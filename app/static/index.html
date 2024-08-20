@@ -107,8 +107,16 @@
             <div id="tsne-plot" class="plot"></div>
             <div id="kmeans-plot" class="plot"></div>
             <div id="dbscan-plot" class="plot"></div>
+            <div id="hierarchical-plot" class="plot"></div>
+        </div>
+        <div class="silhouette-scores">
+            <div id="kmeans-silhouette"></div>
+            <div id="dbscan-silhouette"></div>
+            <div id="hierarchical-silhouette"></div>
         </div>
     </div>
+    
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     
     <script>
         const fileInput = document.getElementById('fileInput');
@@ -126,6 +134,8 @@
                 processButton.disabled = true;
             }
         });
+
+        let globalResult;
 
         async function processData() {
             const file = fileInput.files[0];
@@ -171,12 +181,20 @@
         }
 
         async function readCSV(file) {
-            return new Promise((resolve) => {
+            return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const text = e.target.result;
                     const lines = text.split('\n').filter(line => line.trim() !== '');
+                    if (lines.length < 2) {
+                        reject(new Error('CSV file must contain at least two lines (header and data)'));
+                        return;
+                    }
                     const headers = lines[0].split(',').map(header => header.trim());
+                    if (headers.length < 2) {
+                        reject(new Error('CSV file must contain at least two columns'));
+                        return;
+                    }
                     console.log('Headers:', headers);
                     const data = lines.slice(1).map((line, lineIndex) => {
                         const values = line.split(',');
@@ -189,9 +207,14 @@
                             return obj;
                         }, {});
                     });
+                    if (data.length === 0) {
+                        reject(new Error('CSV file does not contain any data rows'));
+                        return;
+                    }
                     console.log('Parsed data (first 5 rows):', data.slice(0, 5));
                     resolve(data);
                 };
+                reader.onerror = (e) => reject(new Error('Error reading file'));
                 reader.readAsText(file);
             });
         }
@@ -235,8 +258,13 @@
             plotScatter('original-plot', result.original_data, 'Original Data', xLabel, yLabel, zLabel);
             plotScatter('pca-plot', result.pca, 'PCA Results', 'PC1', 'PC2', plotType === '3d' ? 'PC3' : null);
             plotScatter('tsne-plot', result.tsne, 't-SNE Results', 't-SNE 1', 't-SNE 2', plotType === '3d' ? 't-SNE 3' : null);
-            plotScatter('kmeans-plot', result.original_data, 'K-means Clustering', xLabel, yLabel, zLabel, result.kmeans_labels);
-            plotScatter('dbscan-plot', result.original_data, 'DBSCAN Clustering', xLabel, yLabel, zLabel, result.dbscan_labels);
+            plotScatter('kmeans-plot', result.pca, 'K-means Clustering', xLabel, yLabel, zLabel, result.kmeans_labels);
+            plotScatter('dbscan-plot', result.pca, 'DBSCAN Clustering', xLabel, yLabel, zLabel, result.dbscan_labels);
+            plotScatter('hierarchical-plot', result.pca, 'Hierarchical Clustering', xLabel, yLabel, zLabel, result.hierarchical_labels);
+
+            document.getElementById('kmeans-silhouette').textContent = `Silhouette Score: ${result.kmeans_silhouette.toFixed(3)}`;
+            document.getElementById('dbscan-silhouette').textContent = `Silhouette Score: ${result.dbscan_silhouette ? result.dbscan_silhouette.toFixed(3) : 'N/A'}`;
+            document.getElementById('hierarchical-silhouette').textContent = `Silhouette Score: ${result.hierarchical_silhouette.toFixed(3)}`;
         }
 
         function plotScatter(elementId, data, title, xLabel, yLabel, zLabel, colors) {
@@ -271,6 +299,13 @@
 
             Plotly.newPlot(elementId, [trace], layout);
 
+            // Clear existing explanation
+            const existingExplanation = document.querySelector(`#${elementId} .plot-explanation`);
+            if (existingExplanation) {
+                existingExplanation.remove();
+            }
+
+            // Add new explanation
             let explanation = '';
             switch(elementId) {
                 case 'pca-plot':
@@ -285,9 +320,13 @@
                 case 'dbscan-plot':
                     explanation = 'DBSCAN clustering groups data points that are closely packed together, separating clusters of high density from areas of low density. Each color represents a different cluster, with possible noise points in a distinct color.';
                     break;
+                case 'hierarchical-plot':
+                    explanation = 'Hierarchical Clustering groups data by creating a tree of clusters. It can reveal hierarchical structures in the data that other clustering methods might miss.';
+                    break;
             }
             
             const explanationDiv = document.createElement('div');
+            explanationDiv.className = 'plot-explanation';
             explanationDiv.innerHTML = explanation;
             explanationDiv.style.marginTop = '10px';
             explanationDiv.style.fontSize = '14px';
