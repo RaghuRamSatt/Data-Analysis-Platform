@@ -5,49 +5,146 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Multidimensional Data Analysis</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
-        .plot-container {
+        body {
+            font-family: 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .input-section {
             display: flex;
-            flex-wrap: wrap;
-            justify-content: space-around;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        #fileInput {
+            display: none;
+        }
+        .file-label {
+            padding: 10px 15px;
+            background-color: #3498db;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .file-label:hover {
+            background-color: #2980b9;
+        }
+        #processButton {
+            padding: 10px 15px;
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-left: 10px;
+        }
+        #processButton:hover {
+            background-color: #27ae60;
+        }
+        #fileName {
+            margin-left: 10px;
+        }
+        .plot-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
         }
         .plot {
-            width: 45%;
-            margin-bottom: 20px;
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        }
+        #loadingIndicator {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
-    <h1>Multidimensional Data Analysis</h1>
-    <input type="file" id="fileInput" accept=".csv">
-    <button onclick="processData()">Process Data</button>
-    <div class="plot-container">
-        <div id="pca-plot" class="plot"></div>
-        <div id="tsne-plot" class="plot"></div>
-        <div id="kmeans-plot" class="plot"></div>
-        <div id="dbscan-plot" class="plot"></div>
+    <div class="container">
+        <h1>Multidimensional Data Analysis</h1>
+        <div class="input-section">
+            <label for="fileInput" class="file-label">Choose CSV File</label>
+            <input type="file" id="fileInput" accept=".csv">
+            <span id="fileName"></span>
+            <button id="processButton" onclick="processData()" disabled>Process Data</button>
+        </div>
+        <div id="loadingIndicator">Processing data, please wait...</div>
+        <div class="plot-container">
+            <div id="pca-plot" class="plot"></div>
+            <div id="tsne-plot" class="plot"></div>
+            <div id="kmeans-plot" class="plot"></div>
+            <div id="dbscan-plot" class="plot"></div>
+        </div>
     </div>
     
     <script>
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const processButton = document.getElementById('processButton');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                fileName.textContent = file.name;
+                processButton.disabled = false;
+            } else {
+                fileName.textContent = '';
+                processButton.disabled = true;
+            }
+        });
+
         async function processData() {
-            const fileInput = document.getElementById('fileInput');
             const file = fileInput.files[0];
             if (!file) {
                 alert('Please select a CSV file');
                 return;
             }
             
-            const data = await readCSV(file);
-            const response = await fetch('/api/process', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ data }),
-            });
+            loadingIndicator.style.display = 'block';
+            processButton.disabled = true;
             
-            const result = await response.json();
-            plotResults(result);
+            try {
+                const data = await readCSV(file);
+                const response = await fetch('/api/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ data }),
+                });
+                
+                const result = await response.json();
+                plotResults(result);
+            } catch (error) {
+                console.error('Error processing data:', error);
+                alert('An error occurred while processing the data. Please try again.');
+            } finally {
+                loadingIndicator.style.display = 'none';
+                processButton.disabled = false;
+            }
         }
 
         async function readCSV(file) {
@@ -83,13 +180,15 @@
                 y: data.map(p => p[1]),
                 mode: 'markers',
                 type: 'scatter',
-                marker: colors ? { color: colors } : {},
+                marker: colors ? { color: colors, colorscale: 'Viridis' } : {},
             };
             
             const layout = {
                 title: title,
                 xaxis: { title: xLabel },
                 yaxis: { title: yLabel },
+                height: 400,
+                margin: { l: 50, r: 50, b: 50, t: 50, pad: 4 }
             };
             
             Plotly.newPlot(elementId, [trace], layout);
