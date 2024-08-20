@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multidimensional Data Analysis</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        .plot-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+        }
+        .plot {
+            width: 45%;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Multidimensional Data Analysis</h1>
+    <input type="file" id="fileInput" accept=".csv">
+    <button onclick="processData()">Process Data</button>
+    <div class="plot-container">
+        <div id="pca-plot" class="plot"></div>
+        <div id="tsne-plot" class="plot"></div>
+        <div id="kmeans-plot" class="plot"></div>
+        <div id="dbscan-plot" class="plot"></div>
+    </div>
+    
+    <script>
+        async function processData() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please select a CSV file');
+                return;
+            }
+            
+            const data = await readCSV(file);
+            const response = await fetch('/api/process', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ data }),
+            });
+            
+            const result = await response.json();
+            plotResults(result);
+        }
+
+        async function readCSV(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const text = e.target.result;
+                    const lines = text.split('\n');
+                    const headers = lines[0].split(',');
+                    const data = lines.slice(1).map(line => {
+                        const values = line.split(',');
+                        return headers.reduce((obj, header, index) => {
+                            obj[header] = parseFloat(values[index]);
+                            return obj;
+                        }, {});
+                    });
+                    resolve(data);
+                };
+                reader.readAsText(file);
+            });
+        }
+
+        function plotResults(result) {
+            plotScatter('pca-plot', result.pca, 'PCA Results', 'PC1', 'PC2');
+            plotScatter('tsne-plot', result.tsne, 't-SNE Results', 'Dimension 1', 'Dimension 2');
+            plotScatter('kmeans-plot', result.pca, 'K-means Clustering', 'PC1', 'PC2', result.kmeans_labels);
+            plotScatter('dbscan-plot', result.pca, 'DBSCAN Clustering', 'PC1', 'PC2', result.dbscan_labels);
+        }
+
+        function plotScatter(elementId, data, title, xLabel, yLabel, colors) {
+            const trace = {
+                x: data.map(p => p[0]),
+                y: data.map(p => p[1]),
+                mode: 'markers',
+                type: 'scatter',
+                marker: colors ? { color: colors } : {},
+            };
+            
+            const layout = {
+                title: title,
+                xaxis: { title: xLabel },
+                yaxis: { title: yLabel },
+            };
+            
+            Plotly.newPlot(elementId, [trace], layout);
+        }
+    </script>
+</body>
+</html>
