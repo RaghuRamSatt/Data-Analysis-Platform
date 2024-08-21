@@ -5,25 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Multidimensional Data Analysis</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: 'Roboto', sans-serif;
+            font-family: Arial, sans-serif;
             line-height: 1.6;
-            color: #333;
-            max-width: 1200px;
-            margin: 0 auto;
+            margin: 0;
             padding: 20px;
             background-color: #f4f4f4;
         }
-        h1 {
-            text-align: center;
-            color: #2c3e50;
-        }
         .container {
+            max-width: 1200px;
+            margin: auto;
+            overflow: hidden;
+            padding: 0 20px;
+        }
+        .plot-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+        .plot {
+            width: 48%;
+            margin-bottom: 20px;
             background-color: white;
-            padding: 20px;
-            border-radius: 8px;
+            padding: 15px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
         .input-section {
@@ -37,47 +42,123 @@
         }
         .file-label {
             padding: 10px 15px;
-            background-color: #3498db;
+            background-color: #4CAF50;
             color: white;
-            border-radius: 5px;
             cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        .file-label:hover {
-            background-color: #2980b9;
+            border-radius: 5px;
         }
         #processButton {
+            margin-left: 10px;
             padding: 10px 15px;
-            background-color: #2ecc71;
+            background-color: #008CBA;
             color: white;
             border: none;
-            border-radius: 5px;
             cursor: pointer;
-            transition: background-color 0.3s;
-            margin-left: 10px;
+            border-radius: 5px;
         }
-        #processButton:hover {
-            background-color: #27ae60;
-        }
-        #fileName {
-            margin-left: 10px;
-        }
-        .plot-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-        .plot {
-            background-color: white;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        #processButton:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
         }
         #loadingIndicator {
             display: none;
-            text-align: center;
             margin-top: 20px;
+            text-align: center;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        .controls select, .controls button {
+            margin-right: 10px;
+            padding: 5px;
+        }
+        #parameters {
+            background-color: white;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        #parameters div {
+            margin-bottom: 10px;
+        }
+        #parameters label {
+            display: inline-block;
+            width: 200px;
+        }
+        #parameters input {
+            width: 100px;
+        }
+        #elbowPlot {
+            width: 100%;
+            height: 400px;
+            background-color: white;
+            padding: 15px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .tooltip {
+        position: relative;
+        display: inline-block;
+        cursor: help;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        #elbowPlot .tooltip {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        }
+        #elbowPlot .tooltip .tooltiptext {
+            bottom: auto;
+            top: 100%;
+            left: auto;
+            right: 0;
+            margin-left: 0;
+        }
+        .silhouette-scores {
+        position: relative;
+        padding-right: 30px; /* Make room for the tooltip icons */
+        }
+        .silhouette-scores .tooltip {
+            cursor: help;
+            background-color: #f1f1f1;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            text-align: center;
+            line-height: 20px;
+        }
+        .silhouette-scores .tooltip .tooltiptext {
+            width: 250px; /* Adjust width as needed */
+            bottom: auto;
+            top: -5px;
+            left: auto;
+            right: 25px;
+            margin-left: 0;
+        }
+        .silhouette-tooltip .tooltiptext {
+            background-color: #3498db;
+        }
+        .calinski-tooltip .tooltiptext {
+            background-color: #e74c3c;
         }
     </style>
 </head>
@@ -91,6 +172,23 @@
             <button id="processButton" onclick="processData()" disabled>Process Data</button>
         </div>
         <div id="loadingIndicator">Processing data, please wait...</div>
+        <div id="selectedFeatures"></div>
+        <div id="parameters">
+            <h3>Clustering Parameters:</h3>
+            <div>
+                <label for="n_clusters">Number of clusters (K-means):</label>
+                <input type="number" id="n_clusters" min="2" max="10" value="3">
+            </div>
+            <div>
+                <label for="eps">Epsilon (DBSCAN):</label>
+                <input type="number" id="eps" min="0.1" max="2" step="0.1" value="0.5">
+            </div>
+            <div>
+                <label for="min_samples">Min samples (DBSCAN):</label>
+                <input type="number" id="min_samples" min="2" max="10" value="5">
+            </div>
+            <button onclick="updateClustering()">Update Clustering</button>
+        </div>
         <div class="controls">
             <select id="plot-type">
                 <option value="2d">2D Plot</option>
@@ -109,76 +207,49 @@
             <div id="dbscan-plot" class="plot"></div>
             <div id="hierarchical-plot" class="plot"></div>
         </div>
+        <div id="elbowPlot" style="position: relative;">
+            <div class="tooltip" style="position: absolute; bottom: 10px; right: 10px;">ℹ️
+                <span class="tooltiptext">
+                    Elbow Method: Used to determine the optimal number of clusters in K-means clustering. The "elbow" of the curve is considered the optimal number of clusters.
+                </span>
+            </div>
+        </div>
         <div class="silhouette-scores">
             <div id="kmeans-silhouette"></div>
+            <div id="kmeans-calinski"></div>
             <div id="dbscan-silhouette"></div>
+            <div id="dbscan-calinski"></div>
             <div id="hierarchical-silhouette"></div>
+            <div id="hierarchical-calinski"></div>
+            <div class="tooltip silhouette-tooltip" style="position: absolute; top: 0; right: 0;">ℹ️
+                <span class="tooltiptext">
+                    Silhouette Score: Measures how similar an object is to its own cluster compared to other clusters. Range is from -1 to 1, where higher values indicate better-defined clusters.
+                </span>
+            </div>
+            <div class="tooltip calinski-tooltip" style="position: absolute; top: 25px; right: 0;">ℹ️
+                <span class="tooltiptext">
+                    Calinski-Harabasz Index: Ratio of the between-clusters dispersion mean and the within-cluster dispersion. Higher values indicate better-defined clusters.
+                </span>
+            </div>
         </div>
     </div>
     
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    
     <script>
+        let globalResult;
         const fileInput = document.getElementById('fileInput');
         const fileName = document.getElementById('fileName');
         const processButton = document.getElementById('processButton');
         const loadingIndicator = document.getElementById('loadingIndicator');
 
-        fileInput.addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (file) {
-                fileName.textContent = file.name;
+        fileInput.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                fileName.textContent = e.target.files[0].name;
                 processButton.disabled = false;
             } else {
                 fileName.textContent = '';
                 processButton.disabled = true;
             }
         });
-
-        let globalResult;
-
-        async function processData() {
-            const file = fileInput.files[0];
-            if (!file) {
-                alert('Please select a CSV file');
-                return;
-            }
-            
-            console.log('Starting data processing...');
-            loadingIndicator.style.display = 'block';
-            processButton.disabled = true;
-            
-            try {
-                console.log('Reading CSV...');
-                const data = await readCSV(file);
-                console.log('CSV read complete. Sending data to server...');
-                const response = await fetch('/api/process', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ data }),
-                });
-                
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Unknown error occurred');
-                }
-                
-                console.log('Server processing complete. Rendering plots...');
-                const result = await response.json();
-                globalResult = result;
-                populateAxisSelectors(result.feature_names);
-                plotResults(result);
-                console.log('Plotting complete.');
-            } catch (error) {
-                console.error('Error processing data:', error);
-                alert(`An error occurred while processing the data: ${error.message}`);
-            } finally {
-                loadingIndicator.style.display = 'none';
-                processButton.disabled = false;
-            }
-        }
 
         async function readCSV(file) {
             return new Promise((resolve, reject) => {
@@ -219,6 +290,59 @@
             });
         }
 
+        async function processData() {
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please select a CSV file');
+                return;
+            }
+            
+            console.log('Starting data processing...');
+            loadingIndicator.style.display = 'block';
+            processButton.disabled = true;
+            
+            try {
+                console.log('Reading CSV...');
+                const data = await readCSV(file);
+                console.log('CSV read complete. Sending data to server...');
+                const response = await fetch('/api/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ data }),
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Unknown error occurred');
+                }
+                
+                console.log('Server processing complete. Rendering plots...');
+                const result = await response.json();
+                globalResult = result;
+                displaySelectedFeatures(result.feature_names, result.selected_features);
+                populateAxisSelectors(result.selected_features);
+                plotResults(result);
+                console.log('Plotting complete.');
+            } catch (error) {
+                console.error('Error processing data:', error);
+                alert(`An error occurred while processing the data: ${error.message}`);
+            } finally {
+                loadingIndicator.style.display = 'none';
+                processButton.disabled = false;
+            }
+        }
+
+        function displaySelectedFeatures(allFeatures, selectedFeatures) {
+            const selectedFeaturesDiv = document.getElementById('selectedFeatures');
+            selectedFeaturesDiv.innerHTML = `
+                <h3>Feature Selection Results:</h3>
+                <p>Selected ${selectedFeatures.length} out of ${allFeatures.length} features.</p>
+                <p>Selected features: ${selectedFeatures.join(', ')}</p>
+            `;
+        }
+
         function populateAxisSelectors(features) {
             const selectors = ['x-axis', 'y-axis', 'z-axis'];
             selectors.forEach((selector, index) => {
@@ -230,7 +354,7 @@
                     option.text = feature;
                     select.appendChild(option);
                 });
-                select.selectedIndex = index;
+                select.selectedIndex = index < features.length ? index : 0;
             });
         }
 
@@ -238,6 +362,40 @@
             document.getElementById('z-axis').style.display = 
                 this.value === '3d' ? 'inline-block' : 'none';
         });
+
+        async function updateClustering() {
+            const n_clusters = document.getElementById('n_clusters').value;
+            const eps = document.getElementById('eps').value;
+            const min_samples = document.getElementById('min_samples').value;
+            
+            const params = {
+                n_clusters: parseInt(n_clusters),
+                eps: parseFloat(eps),
+                min_samples: parseInt(min_samples)
+            };
+            
+            try {
+                const response = await fetch('/api/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ data: globalResult.original_data, params: params }),
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Unknown error occurred');
+                }
+                
+                const result = await response.json();
+                globalResult = { ...globalResult, ...result };
+                plotResults(globalResult);
+            } catch (error) {
+                console.error('Error updating clustering:', error);
+                alert(`An error occurred while updating clustering: ${error.message}`);
+            }
+        }
 
         function updatePlots() {
             if (globalResult) {
@@ -251,20 +409,25 @@
             const yIndex = document.getElementById('y-axis').value;
             const zIndex = document.getElementById('z-axis').value;
 
-            const xLabel = result.feature_names[xIndex];
-            const yLabel = result.feature_names[yIndex];
-            const zLabel = plotType === '3d' ? result.feature_names[zIndex] : null;
+            const xLabel = result.selected_features[xIndex];
+            const yLabel = result.selected_features[yIndex];
+            const zLabel = plotType === '3d' ? result.selected_features[zIndex] : null;
 
             plotScatter('original-plot', result.original_data, 'Original Data', xLabel, yLabel, zLabel);
             plotScatter('pca-plot', result.pca, 'PCA Results', 'PC1', 'PC2', plotType === '3d' ? 'PC3' : null);
             plotScatter('tsne-plot', result.tsne, 't-SNE Results', 't-SNE 1', 't-SNE 2', plotType === '3d' ? 't-SNE 3' : null);
-            plotScatter('kmeans-plot', result.pca, 'K-means Clustering', xLabel, yLabel, zLabel, result.kmeans_labels);
-            plotScatter('dbscan-plot', result.pca, 'DBSCAN Clustering', xLabel, yLabel, zLabel, result.dbscan_labels);
-            plotScatter('hierarchical-plot', result.pca, 'Hierarchical Clustering', xLabel, yLabel, zLabel, result.hierarchical_labels);
+            plotScatter('kmeans-plot', result.pca, 'K-means Clustering', 'PC1', 'PC2', plotType === '3d' ? 'PC3' : null, result.kmeans_labels);
+            plotScatter('dbscan-plot', result.pca, 'DBSCAN Clustering', 'PC1', 'PC2', plotType === '3d' ? 'PC3' : null, result.dbscan_labels);
+            plotScatter('hierarchical-plot', result.pca, 'Hierarchical Clustering', 'PC1', 'PC2', plotType === '3d' ? 'PC3' : null, result.hierarchical_labels);
 
-            document.getElementById('kmeans-silhouette').textContent = `Silhouette Score: ${result.kmeans_silhouette.toFixed(3)}`;
-            document.getElementById('dbscan-silhouette').textContent = `Silhouette Score: ${result.dbscan_silhouette ? result.dbscan_silhouette.toFixed(3) : 'N/A'}`;
-            document.getElementById('hierarchical-silhouette').textContent = `Silhouette Score: ${result.hierarchical_silhouette.toFixed(3)}`;
+            document.getElementById('kmeans-silhouette').textContent = `K-means Silhouette Score: ${result.kmeans_silhouette.toFixed(3)}`;
+            document.getElementById('kmeans-calinski').textContent = `K-means Calinski-Harabasz Score: ${result.kmeans_calinski.toFixed(3)}`;
+            document.getElementById('dbscan-silhouette').textContent = `DBSCAN Silhouette Score: ${result.dbscan_silhouette ? result.dbscan_silhouette.toFixed(3) : 'N/A'}`;
+            document.getElementById('dbscan-calinski').textContent = `DBSCAN Calinski-Harabasz Score: ${result.dbscan_calinski ? result.dbscan_calinski.toFixed(3) : 'N/A'}`;
+            document.getElementById('hierarchical-silhouette').textContent = `Hierarchical Silhouette Score: ${result.hierarchical_silhouette.toFixed(3)}`;
+            document.getElementById('hierarchical-calinski').textContent = `Hierarchical Calinski-Harabasz Score: ${result.hierarchical_calinski.toFixed(3)}`;
+
+            plotElbowMethod(result.elbow_scores);
         }
 
         function plotScatter(elementId, data, title, xLabel, yLabel, zLabel, colors) {
@@ -285,55 +448,85 @@
                 title: title,
                 xaxis: { title: xLabel },
                 yaxis: { title: yLabel },
-                height: 400,
-                margin: { l: 50, r: 50, b: 50, t: 50, pad: 4 }
             };
 
             if (zLabel) {
-                layout.scene = {
-                    xaxis: { title: xLabel },
-                    yaxis: { title: yLabel },
-                    zaxis: { title: zLabel }
-                };
+                layout.zaxis = { title: zLabel };
+                layout.scene = { xaxis: { title: xLabel }, yaxis: { title: yLabel }, zaxis: { title: zLabel } };
             }
 
             Plotly.newPlot(elementId, [trace], layout);
 
-            // Clear existing explanation
-            const existingExplanation = document.querySelector(`#${elementId} .plot-explanation`);
-            if (existingExplanation) {
-                existingExplanation.remove();
+            // Check if explanation already exists
+            let explanationDiv = document.querySelector(`#${elementId} .plot-explanation`);
+            if (!explanationDiv) {
+                let explanation = '';
+                switch(elementId) {
+                    case 'pca-plot':
+                        explanation = 'PCA reduces the dimensionality of the data while preserving as much variance as possible.';
+                        break;
+                    case 'tsne-plot':
+                        explanation = 't-SNE is a technique for dimensionality reduction that is particularly good at preserving local structures in the data.';
+                        break;
+                    case 'kmeans-plot':
+                        explanation = 'K-means clustering groups similar data points together. Each color represents a different cluster.';
+                        break;
+                    case 'dbscan-plot':
+                        explanation = 'DBSCAN clustering groups data points that are closely packed together, separating clusters of high density from areas of low density.';
+                        break;
+                    case 'hierarchical-plot':
+                        explanation = 'Hierarchical Clustering groups data by creating a tree of clusters.';
+                        break;
+                }
+                
+                explanationDiv = document.createElement('div');
+                explanationDiv.className = 'plot-explanation';
+                explanationDiv.innerHTML = explanation;
+                explanationDiv.style.marginTop = '10px';
+                explanationDiv.style.fontSize = '14px';
+                explanationDiv.style.color = '#666';
+                document.getElementById(elementId).appendChild(explanationDiv);
             }
-
-            // Add new explanation
-            let explanation = '';
-            switch(elementId) {
-                case 'pca-plot':
-                    explanation = 'PCA reduces the dimensionality of the data while preserving as much variance as possible. Each point represents an Iris flower, and their positions show how they relate to each other based on the two most important combined features.';
-                    break;
-                case 'tsne-plot':
-                    explanation = 't-SNE is a technique for dimensionality reduction that is particularly good at preserving local structures in the data. It helps visualize high-dimensional data by giving each datapoint a location in a two-dimensional map.';
-                    break;
-                case 'kmeans-plot':
-                    explanation = 'K-means clustering groups similar data points together. Each color represents a different cluster, showing how the algorithm has grouped the Iris flowers based on their features.';
-                    break;
-                case 'dbscan-plot':
-                    explanation = 'DBSCAN clustering groups data points that are closely packed together, separating clusters of high density from areas of low density. Each color represents a different cluster, with possible noise points in a distinct color.';
-                    break;
-                case 'hierarchical-plot':
-                    explanation = 'Hierarchical Clustering groups data by creating a tree of clusters. It can reveal hierarchical structures in the data that other clustering methods might miss.';
-                    break;
-            }
-            
-            const explanationDiv = document.createElement('div');
-            explanationDiv.className = 'plot-explanation';
-            explanationDiv.innerHTML = explanation;
-            explanationDiv.style.marginTop = '10px';
-            explanationDiv.style.fontSize = '14px';
-            explanationDiv.style.color = '#666';
-            document.getElementById(elementId).appendChild(explanationDiv);
         }
-        
+
+        function plotElbowMethod(elbowScores) {
+            const trace = {
+                x: Array.from({length: elbowScores.length}, (_, i) => i + 1),
+                y: elbowScores,
+                mode: 'lines+markers',
+                type: 'scatter'
+            };
+            
+            const layout = {
+                title: 'Elbow Method for K-means',
+                xaxis: { title: 'Number of Clusters' },
+                yaxis: { title: 'Inertia' }
+            };
+            
+            Plotly.newPlot('elbowPlot', [trace], layout);
+        }
+
+        async function readCSV(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const text = e.target.result;
+                    const lines = text.split('\n').filter(line => line.trim() !== '');
+                    const headers = lines[0].split(',').map(header => header.trim());
+                    const data = lines.slice(1).map(line => {
+                        const values = line.split(',');
+                        return headers.reduce((obj, header, index) => {
+                            obj[header] = values[index] ? parseFloat(values[index]) : null;
+                            return obj;
+                        }, {});
+                    });
+                    resolve(data);
+                };
+                reader.onerror = (e) => reject(new Error('Error reading file'));
+                reader.readAsText(file);
+            });
+        }
     </script>
 </body>
 </html>
+            

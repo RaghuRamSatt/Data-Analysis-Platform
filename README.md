@@ -5,13 +5,16 @@ This project is a web-based platform for multidimensional data analysis and visu
 
 ## Features
 - Data upload via CSV file
-- Preprocessing with StandardScaler
+- Preprocessing with StandardScaler and automatic feature selection
 - Dimensionality reduction: PCA and t-SNE
 - Clustering: K-means, DBSCAN, and Hierarchical clustering
 - Interactive 2D and 3D visualizations using Plotly
 - User-controlled feature selection for visualizations
 - Original data visualization alongside analysis results
-- Cluster evaluation using Silhouette Scores
+- Cluster evaluation using Silhouette Scores and Calinski-Harabasz Index
+- Elbow method for determining optimal number of clusters in K-means
+- Interactive parameter tuning for clustering algorithms
+- Informative tooltips explaining clustering quality metrics and visualization techniques
 
 ## Technologies Used
 - Backend: Flask, NumPy, Pandas, Scikit-learn
@@ -61,15 +64,24 @@ This project is a web-based platform for multidimensional data analysis and visu
 - **Cluster Evaluation**: Use Silhouette Scores to quantitatively assess the quality of clustering results.
 - **Explanations**: Each plot comes with a brief explanation of the technique used, enhancing educational value.
 
+## Clustering Quality Metrics
+- **Silhouette Score**: Measures how similar an object is to its own cluster compared to other clusters. Range is from -1 to 1, where higher values indicate better-defined clusters.
+- **Calinski-Harabasz Index**: Also known as the Variance Ratio Criterion, this score is defined as the ratio of the between-clusters dispersion mean and the within-cluster dispersion. Higher values indicate better-defined clusters.
+- **Elbow Method**: A method used to determine the optimal number of clusters in K-means clustering. It plots the inertia (within-cluster sum of squares) as a function of the number of clusters. The "elbow" of the curve is considered the optimal number of clusters.
+
+## User Interface
+- Interactive parameter tuning for clustering algorithms
+- Informative tooltips explaining clustering quality metrics and visualization techniques
+- Responsive design for better usability across different devices
+
 ## Future Improvements
 - Add more unsupervised learning algorithms (e.g., OPTICS, Gaussian Mixture Models)
 - Implement automatic feature selection methods
 - Add anomaly detection techniques (e.g., Isolation Forest, Local Outlier Factor)
-- Enhance the user interface with more controls for algorithm parameters
-- Implement more advanced visualizations (e.g., parallel coordinates plots, Andrews curves)
-- Add support for larger datasets with server-side processing and data streaming
-- Implement more robust error handling and data validation for CSV uploads
-- Add export functionality for processed data and analysis results
+- Enhance the user interface with more advanced controls and visualizations
+- Implement data preprocessing options (e.g., handling missing values, feature scaling)
+- Add export functionality for analysis results and visualizations
+- Implement user authentication and data management features
 
 ## Contributing
 Contributions are welcome! Please feel free to submit a Pull Request.
