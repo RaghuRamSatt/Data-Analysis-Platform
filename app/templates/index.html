@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multidimensional Data Analysis</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <h1>Multidimensional Data Analysis</h1>
+    <div class="input-section">
+        <label for="fileInput" class="file-label">Choose CSV File</label>
+        <input type="file" id="fileInput" accept=".csv">
+        <span id="fileName"></span>
+        <button id="processButton" onclick="processData()" disabled>Process Data</button>
+    </div>
+    <div id="loadingIndicator">Processing data, please wait...</div>
+    <div id="selectedFeatures"></div>
+    <div class="progress-container">
+        <div id="progressBar" class="progress"></div>
+        <div id="progressStatus">0%</div>
+    </div>
+    <div id="parameters">
+        <h3>Clustering Parameters:</h3>
+        <div class="parameter-tooltip">
+            <label for="n_clusters">Number of clusters (K-means):</label>
+            <span class="info-icon" title="Number of clusters to form in K-means clustering">ℹ️</span>
+            <input type="number" id="n_clusters" min="2" max="10" value="3">
+        </div>
+        <div class="parameter-tooltip">
+            <label for="eps">Epsilon (DBSCAN):</label>
+            <span class="info-icon" title="Maximum distance between two samples for them to be considered neighbors">ℹ️</span>
+            <input type="number" id="eps" min="0.1" max="2" step="0.1" value="0.5">
+        </div>
+        <div class="parameter-tooltip">
+            <label for="min_samples">Min samples (DBSCAN):</label>
+            <span class="info-icon" title="Minimum number of samples in a neighborhood for a point to be considered a core point">ℹ️</span>
+            <input type="number" id="min_samples" min="2" max="10" value="5">
+        </div>
+        <button onclick="updateClustering()">Update Clustering</button>
+    </div>
+    <div class="controls">
+        <select id="plot-type">
+            <option value="2d">2D Plot</option>
+            <option value="3d">3D Plot</option>
+        </select>
+        <select id="x-axis"></select>
+        <select id="y-axis"></select>
+        <select id="z-axis" style="display: none;"></select>
+        <button onclick="updatePlots()">Update Plots</button>
+    </div>
+    <div class="plot-container">
+        <div id="original-plot" class="plot"></div>
+        <div id="pca-plot" class="plot"></div>
+        <div id="tsne-plot" class="plot"></div>
+        <div id="kmeans-plot" class="plot"></div>
+        <div id="dbscan-plot" class="plot"></div>
+        <div id="hierarchical-plot" class="plot"></div>
+    </div>
+    <div id="elbowPlot"></div>
+    <div class="silhouette-scores">
+        <div id="kmeans-silhouette"></div>
+        <div id="kmeans-calinski"></div>
+        <div id="dbscan-silhouette"></div>
+        <div id="dbscan-calinski"></div>
+        <div id="hierarchical-silhouette"></div>
+        <div id="hierarchical-calinski"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/dataProcessing.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/plotting.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
+    <button id="exportButton" onclick="exportResults()" class="export-button">Export Results</button>
+</body>
+</html>
+            

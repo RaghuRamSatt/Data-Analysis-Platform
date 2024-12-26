@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import numpy as np
 import pandas as pd
@@ -8,93 +8,97 @@ from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import silhouette_score, calinski_harabasz_score
 from sklearn.feature_selection import VarianceThreshold
-
-import traceback
+from .config import Config
+from functools import lru_cache
+import sys
 
 app = Flask(__name__)
+app.config.from_object(Config)
 CORS(app)
 
 @app.route('/')
 def index():
-    return send_from_directory('static', 'index.html')
+    return render_template('index.html')
 
 @app.route('/api/process', methods=['POST'])
 def process_data():
     try:
         data = request.json['data']
-        if not data or not isinstance(data, list):
-            return jsonify({'error': 'Invalid data format'}), 400
-        
         params = request.json.get('params', {})
-
         df = pd.DataFrame(data)
-        if df.empty:
-            return jsonify({'error': 'Empty dataset'}), 400
         
-        if df.shape[1] < 2:
-            return jsonify({'error': 'Dataset must have at least two columns'}), 400
+        # Validate data
+        validation_error = validate_data(data, df)
+        if validation_error:
+            return validation_error
         
-        feature_names = df.columns.tolist()
+        # Convert target column to numeric if present
+        if 'target' in df.columns:
+            df['target'] = pd.to_numeric(df['target'], errors='coerce')
+            target = df.pop('target').values
+            feature_names = df.columns.tolist()
+        else:
+            feature_names = df.columns.tolist()
+            target = None
         
-        # Check for non-numeric data
-        non_numeric_cols = df.select_dtypes(exclude=[np.number]).columns
-        if not non_numeric_cols.empty:
-            return jsonify({'error': f'Non-numeric data found in columns: {", ".join(non_numeric_cols)}'}), 400
-        
-        print("Received data for processing") 
-        print(f"DataFrame shape: {df.shape}")
-        
-        print("Scaling data...")
+        # Preprocessing
         scaler = StandardScaler()
         scaled_data = scaler.fit_transform(df)
         
-        print("Performing feature selection...")
-        selector = VarianceThreshold(threshold=0.1)  # You can adjust this threshold
+        # Feature selection
+        selector = VarianceThreshold(threshold=0.1)
         selected_data = selector.fit_transform(scaled_data)
-        selected_features = [feature for feature, selected in zip(feature_names, selector.get_support()) if selected]
+        selected_features = [f for f, s in zip(feature_names, selector.get_support()) if s]
         
-        print(f"Selected {len(selected_features)} features: {selected_features}")
-        
-        # Use selected_data for further processing
-        print("Performing PCA...")
+        # Dimensionality reduction
         pca = PCA(n_components=3)
         pca_result = pca.fit_transform(selected_data)
-        pca_explained_variance = pca.explained_variance_ratio_ * 100
+        pca_explained_variance = pca.explained_variance_ratio_
         
-        print("Performing t-SNE...")
         tsne = TSNE(n_components=3, random_state=42)
         tsne_result = tsne.fit_transform(selected_data)
         
-        print("Performing K-means clustering...")
+        # Clustering
         n_clusters = params.get('n_clusters', 3)
-        kmeans = KMeans(n_clusters=n_clusters, random_state=42)
-        kmeans_labels = kmeans.fit_predict(selected_data)
-        kmeans_silhouette = silhouette_score(selected_data, kmeans_labels)
-        kmeans_calinski = calinski_harabasz_score(selected_data, kmeans_labels)
-        
-        print("Performing DBSCAN clustering...")
         eps = params.get('eps', 0.5)
         min_samples = params.get('min_samples', 5)
+        
+        # K-means clustering
+        kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+        kmeans_labels = kmeans.fit_predict(selected_data)
+        
+        # DBSCAN clustering
         dbscan = DBSCAN(eps=eps, min_samples=min_samples)
         dbscan_labels = dbscan.fit_predict(selected_data)
-        dbscan_silhouette = silhouette_score(selected_data, dbscan_labels) if len(set(dbscan_labels)) > 1 else None
-        dbscan_calinski = calinski_harabasz_score(selected_data, dbscan_labels) if len(set(dbscan_labels)) > 1 else None
         
-        print("Performing Hierarchical clustering...")
-        hierarchical = AgglomerativeClustering(n_clusters=3)
+        # Hierarchical clustering
+        hierarchical = AgglomerativeClustering(n_clusters=n_clusters)
         hierarchical_labels = hierarchical.fit_predict(selected_data)
-        hierarchical_silhouette = silhouette_score(selected_data, hierarchical_labels)
-        hierarchical_calinski = calinski_harabasz_score(selected_data, hierarchical_labels)
         
-        print("Performing elbow method for K-means...")
+        # Calculate metrics
+        metrics = {}
+        metrics['kmeans_silhouette'] = silhouette_score(selected_data, kmeans_labels)
+        metrics['kmeans_calinski'] = calinski_harabasz_score(selected_data, kmeans_labels)
+        
+        if len(set(dbscan_labels)) > 1:  # Only calculate if DBSCAN found more than one cluster
+            metrics['dbscan_silhouette'] = silhouette_score(selected_data, dbscan_labels)
+            metrics['dbscan_calinski'] = calinski_harabasz_score(selected_data, dbscan_labels)
+        else:
+            metrics['dbscan_silhouette'] = None
+            metrics['dbscan_calinski'] = None
+            
+        metrics['hierarchical_silhouette'] = silhouette_score(selected_data, hierarchical_labels)
+        metrics['hierarchical_calinski'] = calinski_harabasz_score(selected_data, hierarchical_labels)
+        
+        # Calculate elbow curve
+        max_clusters = min(10, len(df) - 1)
         elbow_scores = []
-        max_clusters = min(10, len(df) - 1)  # Adjust the maximum number of clusters as needed
         for k in range(1, max_clusters + 1):
             kmeans = KMeans(n_clusters=k, random_state=42)
             kmeans.fit(selected_data)
-            elbow_scores.append(kmeans.inertia_)
+            elbow_scores.append(float(kmeans.inertia_))  # Convert numpy.float64 to Python float
         
-        print("Processing complete. Sending results...")
+        # Convert numpy arrays to lists for JSON serialization
         return jsonify({
             'feature_names': feature_names,
             'selected_features': selected_features,
@@ -102,21 +106,86 @@ def process_data():
             'pca_explained_variance': pca_explained_variance.tolist(),
             'tsne': tsne_result.tolist(),
             'kmeans_labels': kmeans_labels.tolist(),
-            'kmeans_silhouette': kmeans_silhouette,
-            'kmeans_calinski': kmeans_calinski,
             'dbscan_labels': dbscan_labels.tolist(),
-            'dbscan_silhouette': dbscan_silhouette,
-            'dbscan_calinski': dbscan_calinski,
             'hierarchical_labels': hierarchical_labels.tolist(),
-            'hierarchical_silhouette': hierarchical_silhouette,
-            'hierarchical_calinski': hierarchical_calinski,
             'elbow_scores': elbow_scores,
-            'original_data': df.values.tolist()
+            'original_data': df.values.tolist(),
+            **metrics
         })
+        
     except Exception as e:
         print(f"Error processing data: {str(e)}")
-        print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
+
+def validate_data(data, df):
+    if not data or not isinstance(data, list):
+        return {'error': 'Invalid data format'}, 400
+    
+    if df.empty:
+        return {'error': 'Empty dataset'}, 400
+    
+    if df.shape[1] < 2:
+        return {'error': 'Dataset must have at least two columns'}, 400
+    
+    if len(data) > 10000:
+        return {'error': 'Dataset too large. Maximum 10,000 rows allowed.'}, 400
+        
+    if sys.getsizeof(data) > 50 * 1024 * 1024:
+        return {'error': 'Dataset exceeds memory limit of 50MB'}, 400
+    
+    non_numeric_cols = df.select_dtypes(exclude=[np.number]).columns
+    if not non_numeric_cols.empty:
+        return {'error': f'Non-numeric data found in columns: {", ".join(non_numeric_cols)}'}, 400
+    
+    return None
+
+@lru_cache(maxsize=32)
+def perform_dimensionality_reduction(data_hash, data):
+    pca = PCA(n_components=3)
+    pca_result = pca.fit_transform(data)
+    pca_explained_variance = pca.explained_variance_ratio_ * 100
+    
+    tsne = TSNE(n_components=3, random_state=42)
+    tsne_result = tsne.fit_transform(data)
+    
+    return pca_result, pca_explained_variance, tsne_result
+
+def perform_clustering(data, params):
+    n_clusters = params.get('n_clusters', 3)
+    eps = params.get('eps', 0.5)
+    min_samples = params.get('min_samples', 5)
+    
+    # K-means
+    kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+    kmeans_labels = kmeans.fit_predict(data)
+    
+    # DBSCAN
+    dbscan = DBSCAN(eps=eps, min_samples=min_samples)
+    dbscan_labels = dbscan.fit_predict(data)
+    
+    # Hierarchical
+    hierarchical = AgglomerativeClustering(n_clusters=3)
+    hierarchical_labels = hierarchical.fit_predict(data)
+    
+    return kmeans_labels, dbscan_labels, hierarchical_labels, kmeans.inertia_
+
+def calculate_metrics(data, kmeans_labels, dbscan_labels, hierarchical_labels):
+    metrics = {}
+    
+    metrics['kmeans_silhouette'] = silhouette_score(data, kmeans_labels)
+    metrics['kmeans_calinski'] = calinski_harabasz_score(data, kmeans_labels)
+    
+    if len(set(dbscan_labels)) > 1:
+        metrics['dbscan_silhouette'] = silhouette_score(data, dbscan_labels)
+        metrics['dbscan_calinski'] = calinski_harabasz_score(data, dbscan_labels)
+    else:
+        metrics['dbscan_silhouette'] = None
+        metrics['dbscan_calinski'] = None
+    
+    metrics['hierarchical_silhouette'] = silhouette_score(data, hierarchical_labels)
+    metrics['hierarchical_calinski'] = calinski_harabasz_score(data, hierarchical_labels)
+    
+    return metrics
 
 if __name__ == '__main__':
     app.run(debug=True)

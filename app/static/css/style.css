@@ -1,0 +1,184 @@
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 20px;
+    background-color: #f4f4f4;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+h1 {
+    color: #333;
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.input-section {
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.file-label {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: inline-block;
+    margin-right: 10px;
+}
+
+#fileInput {
+    display: none;
+}
+
+button {
+    background-color: #008CBA;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin: 5px;
+}
+
+button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+button:hover:not(:disabled) {
+    background-color: #007399;
+}
+
+.controls {
+    margin: 20px 0;
+    text-align: center;
+}
+
+select {
+    padding: 5px;
+    margin: 5px;
+}
+
+.plot-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+.plot {
+    min-height: 400px;
+    background: white;
+    padding: 15px;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+#loadingIndicator {
+    display: none;
+    text-align: center;
+    margin: 20px 0;
+}
+
+.tooltip {
+    position: relative;
+    display: inline-block;
+    cursor: help;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 200px;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -100px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+}
+
+#parameters {
+    margin: 20px 0;
+    padding: 15px;
+    background-color: white;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+#parameters div {
+    margin: 10px 0;
+}
+
+#parameters label {
+    display: inline-block;
+    width: 200px;
+}
+
+#parameters input {
+    width: 60px;
+    padding: 5px;
+}
+
+.plot-explanation {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #666;
+}
+
+.progress-container {
+    width: 100%;
+    max-width: 600px;
+    margin: 10px auto;
+    display: none;
+}
+
+.progress {
+    width: 0%;
+    height: 20px;
+    background-color: #4CAF50;
+    transition: width 0.3s ease-in-out;
+}
+
+.parameter-tooltip {
+    position: relative;
+    margin: 10px 0;
+}
+
+.info-icon {
+    cursor: help;
+    margin-left: 5px;
+    color: #666;
+}
+
+.export-button {
+    display: block;
+    margin: 20px auto;
+    padding: 10px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.export-button:hover {
+    background-color: #45a049;
+}
