@@ -153,6 +153,8 @@ function plotResults(result) {
     plotScatter('kmeans-plot', result.pca, 'K-means Clustering', 'PC1', 'PC2', plotType === '3d' ? 'PC3' : null, result.kmeans_labels);
     plotScatter('dbscan-plot', result.pca, 'DBSCAN Clustering', 'PC1', 'PC2', plotType === '3d' ? 'PC3' : null, result.dbscan_labels);
     plotScatter('hierarchical-plot', result.pca, 'Hierarchical Clustering', 'PC1', 'PC2', plotType === '3d' ? 'PC3' : null, result.hierarchical_labels);
+    plotScatter('optics-plot', result.pca, 'OPTICS Clustering', 'PC1', 'PC2', plotType === '3d' ? 'PC3' : null, result.optics_labels);
+    plotScatter('gmm-plot', result.pca, 'GMM Clustering', 'PC1', 'PC2', plotType === '3d' ? 'PC3' : null, result.gmm_labels);
 
     // Update metrics display
     document.getElementById('kmeans-silhouette').textContent = `K-means Silhouette Score: ${result.kmeans_silhouette.toFixed(3)}`;
@@ -161,6 +163,10 @@ function plotResults(result) {
     document.getElementById('dbscan-calinski').textContent = `DBSCAN Calinski-Harabasz Score: ${result.dbscan_calinski ? result.dbscan_calinski.toFixed(3) : 'N/A'}`;
     document.getElementById('hierarchical-silhouette').textContent = `Hierarchical Silhouette Score: ${result.hierarchical_silhouette.toFixed(3)}`;
     document.getElementById('hierarchical-calinski').textContent = `Hierarchical Calinski-Harabasz Score: ${result.hierarchical_calinski.toFixed(3)}`;
+    document.getElementById('optics-silhouette').textContent = `OPTICS Silhouette Score: ${result.optics_silhouette ? result.optics_silhouette.toFixed(3) : 'N/A'}`;
+    document.getElementById('optics-calinski').textContent = `OPTICS Calinski-Harabasz Score: ${result.optics_calinski ? result.optics_calinski.toFixed(3) : 'N/A'}`;
+    document.getElementById('gmm-silhouette').textContent = `GMM Silhouette Score: ${result.gmm_silhouette.toFixed(3)}`;
+    document.getElementById('gmm-calinski').textContent = `GMM Calinski-Harabasz Score: ${result.gmm_calinski.toFixed(3)}`;
 
     plotElbowMethod(result.elbow_scores);
 }

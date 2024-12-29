@@ -90,7 +90,9 @@ async function updateClustering() {
     const params = {
         n_clusters: parseInt(n_clusters),
         eps: parseFloat(eps),
-        min_samples: parseInt(min_samples)
+        min_samples: parseInt(min_samples),
+        max_eps: parseFloat(document.getElementById('max_eps').value),
+        gmm_components: parseInt(document.getElementById('gmm_components').value)
     };
     
     try {
@@ -136,7 +138,9 @@ function exportResults() {
         clustering_results: {
             kmeans: globalResult.kmeans_labels,
             dbscan: globalResult.dbscan_labels,
-            hierarchical: globalResult.hierarchical_labels
+            hierarchical: globalResult.hierarchical_labels,
+            optics: globalResult.optics_labels,
+            gmm: globalResult.gmm_labels
         },
         metrics: {
             silhouette_scores: {
@@ -153,7 +157,9 @@ function exportResults() {
         dimensionality_reduction: {
             pca_explained_variance: globalResult.pca_explained_variance,
             elbow_scores: globalResult.elbow_scores
-        }
+        },
+        optics: globalResult.optics_calinski,
+        gmm: globalResult.gmm_calinski
     };
     
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});

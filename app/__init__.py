@@ -22,7 +22,8 @@ import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
-from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering
+from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering, OPTICS
+from sklearn.mixture import GaussianMixture
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import silhouette_score, calinski_harabasz_score
 from sklearn.feature_selection import VarianceThreshold
@@ -95,6 +96,14 @@ def process_data():
         hierarchical = AgglomerativeClustering(n_clusters=n_clusters)
         hierarchical_labels = hierarchical.fit_predict(selected_data)
         
+        # OPTICS clustering
+        optics = OPTICS(min_samples=min_samples, max_eps=eps)
+        optics_labels = optics.fit_predict(selected_data)
+        
+        # GMM clustering
+        gmm = GaussianMixture(n_components=n_clusters, random_state=42)
+        gmm_labels = gmm.fit_predict(selected_data)
+        
         # Calculate metrics
         metrics = {}
         metrics['kmeans_silhouette'] = silhouette_score(selected_data, kmeans_labels)
@@ -109,6 +118,18 @@ def process_data():
             
         metrics['hierarchical_silhouette'] = silhouette_score(selected_data, hierarchical_labels)
         metrics['hierarchical_calinski'] = calinski_harabasz_score(selected_data, hierarchical_labels)
+        
+        # OPTICS metrics
+        if len(set(optics_labels)) > 1:
+            metrics['optics_silhouette'] = silhouette_score(selected_data, optics_labels)
+            metrics['optics_calinski'] = calinski_harabasz_score(selected_data, optics_labels)
+        else:
+            metrics['optics_silhouette'] = None
+            metrics['optics_calinski'] = None
+            
+        # GMM metrics
+        metrics['gmm_silhouette'] = silhouette_score(selected_data, gmm_labels)
+        metrics['gmm_calinski'] = calinski_harabasz_score(selected_data, gmm_labels)
         
         # Calculate elbow curve
         max_clusters = min(10, len(df) - 1)
@@ -128,6 +149,8 @@ def process_data():
             'kmeans_labels': kmeans_labels.tolist(),
             'dbscan_labels': dbscan_labels.tolist(),
             'hierarchical_labels': hierarchical_labels.tolist(),
+            'optics_labels': optics_labels.tolist(),
+            'gmm_labels': gmm_labels.tolist(),
             'elbow_scores': elbow_scores,
             'original_data': df.values.tolist(),
             **metrics
