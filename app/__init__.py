@@ -1,3 +1,21 @@
+import os
+import multiprocessing
+
+# Try to get physical CPU count, fallback to logical CPU count if that fails
+try:
+    cpu_count = len(os.sched_getaffinity(0))
+except AttributeError:
+    try:
+        cpu_count = multiprocessing.cpu_count()
+    except NotImplementedError:
+        cpu_count = 4  # Fallback to a reasonable default
+
+# Reserve one core for system operations
+cpu_count = max(cpu_count - 1, 1)
+
+# Set the environment variable
+os.environ["LOKY_MAX_CPU_COUNT"] = str(cpu_count)
+
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import numpy as np
