@@ -15,6 +15,10 @@ This project is a web-based platform for multidimensional data analysis and visu
 - Elbow method for determining optimal number of clusters in K-means
 - Interactive parameter tuning for clustering algorithms
 - Informative tooltips explaining clustering quality metrics and visualization techniques
+- Real-time progress tracking during data processing
+- Export functionality for analysis results in JSON format
+- Interactive tooltips explaining each visualization technique
+- Progress bar and status updates during analysis
 
 ## Technologies Used
 - Backend: Flask, NumPy, Pandas, Scikit-learn
