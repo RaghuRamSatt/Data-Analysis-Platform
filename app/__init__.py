@@ -32,6 +32,11 @@ from functools import lru_cache
 import sys
 import os 
 import multiprocessing
+from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score
+from sklearn.model_selection import KFold
+from sklearn.preprocessing import RobustScaler, PowerTransformer
+from sklearn.tree import DecisionTreeClassifier
+from scipy import stats
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -139,6 +144,21 @@ def process_data():
             kmeans.fit(selected_data)
             elbow_scores.append(float(kmeans.inertia_))  # Convert numpy.float64 to Python float
         
+        # Additional metrics
+        metrics['cluster_stability'] = {
+            'kmeans': assess_cluster_stability(selected_data, KMeans(n_clusters=n_clusters, random_state=42)),
+            'gmm': assess_cluster_stability(selected_data, GaussianMixture(n_components=n_clusters, random_state=42))
+        }
+        
+        # Statistical tests
+        metrics['normality_test'] = stats.shapiro(selected_data.flatten())[1]
+        
+        # Cluster interpretation
+        metrics['feature_importance'] = {
+            'kmeans': interpret_clusters(selected_data, kmeans_labels, selected_features),
+            'gmm': interpret_clusters(selected_data, gmm_labels, selected_features)
+        }
+        
         # Convert numpy arrays to lists for JSON serialization
         return jsonify({
             'feature_names': feature_names,
@@ -229,6 +249,60 @@ def calculate_metrics(data, kmeans_labels, dbscan_labels, hierarchical_labels):
     metrics['hierarchical_calinski'] = calinski_harabasz_score(data, hierarchical_labels)
     
     return metrics
+
+def assess_cluster_stability(data, model, n_splits=5):
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
+    stability_scores = []
+    
+    # Convert data to numpy array if it isn't already
+    data = np.array(data)
+    
+    for train_idx, val_idx in kf.split(data):
+        # Ensure we're using the same size arrays
+        train_data = data[train_idx]
+        val_data = data[val_idx]
+        
+        # Fit on training data
+        model.fit(train_data)
+        train_clusters = model.predict(train_data)
+        
+        # Predict on validation data
+        val_clusters = model.predict(val_data)
+        
+        # Ensure labels are of same length before comparison
+        min_len = min(len(train_clusters), len(val_clusters))
+        stability_scores.append(
+            adjusted_rand_score(
+                train_clusters[:min_len], 
+                val_clusters[:min_len]
+            )
+        )
+    
+    return np.mean(stability_scores)
+
+def enhance_preprocessing(data):
+    robust_scaler = RobustScaler()
+    data_scaled = robust_scaler.fit_transform(data)
+    
+    power_transformer = PowerTransformer(method='yeo-johnson')
+    data_transformed = power_transformer.fit_transform(data_scaled)
+    
+    return data_transformed
+
+def interpret_clusters(data, labels, feature_names):
+    clf = DecisionTreeClassifier(max_depth=3, random_state=42)
+    clf.fit(data, labels)
+    
+    # Create a dictionary with actual feature names
+    feature_importance = dict(zip(feature_names, clf.feature_importances_))
+    
+    # Sort features by importance
+    sorted_features = sorted(feature_importance.items(), key=lambda x: x[1], reverse=True)
+    
+    return {
+        'features': [x[0] for x in sorted_features],  # Use actual feature names
+        'importance_scores': [float(x[1]) for x in sorted_features]
+    }
 
 if __name__ == '__main__':
     app.run(debug=True)

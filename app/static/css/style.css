@@ -182,3 +182,51 @@ select {
 .export-button:hover {
     background-color: #45a049;
 }
+
+.feature-importance-container {
+    margin: 20px auto;
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    max-width: 1200px;
+}
+
+.analysis-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.analysis-section {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+}
+
+.analysis-section h4 {
+    margin-top: 0;
+    color: #333;
+    text-align: center;
+}
+
+.metrics-summary {
+    margin-top: 15px;
+    padding: 10px;
+    background: white;
+    border-radius: 5px;
+}
+
+.metrics-summary p {
+    margin: 5px 0;
+    font-size: 14px;
+}
+
+.plot {
+    background: white;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    min-height: 300px;
+}

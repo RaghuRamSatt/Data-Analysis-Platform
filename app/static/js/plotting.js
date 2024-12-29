@@ -137,6 +137,116 @@ function plotElbowMethod(elbowScores) {
     Plotly.newPlot('elbowPlot', [trace], layout, config);
 }
 
+function plotClusterDensity(elementId, data, labels) {
+    // Get unique labels and sort them
+    const uniqueLabels = [...new Set(labels)].sort((a, b) => a - b);
+    
+    // Create violin plot traces for each cluster
+    const traces = uniqueLabels.map(label => {
+        // Get data points for this cluster
+        const clusterData = data.filter((_, i) => labels[i] === label);
+        
+        return {
+            type: 'violin',
+            x: Array(clusterData.length).fill(`Cluster ${label}`),
+            y: clusterData,
+            name: `Cluster ${label}`,
+            box: {
+                visible: true
+            },
+            meanline: {
+                visible: true
+            },
+            line: {
+                color: label === -1 ? '#999999' : null // Special color for noise points
+            },
+            points: 'outliers' // Show only outlier points
+        };
+    });
+
+    const layout = {
+        title: {
+            text: 'Cluster Density Distribution',
+            font: { size: 16 }
+        },
+        yaxis: { 
+            title: 'First Principal Component',
+            zeroline: false
+        },
+        violinmode: 'group',
+        showlegend: true,
+        margin: {
+            l: 60,
+            r: 40,
+            t: 50,
+            b: 80
+        },
+        height: 400
+    };
+
+    Plotly.newPlot(elementId, traces, layout);
+}
+
+function plotFeatureImportance(elementId, importance_data, title) {
+    if (!importance_data || !importance_data.features || !importance_data.importance_scores) {
+        console.warn(`No valid importance data for ${elementId}`);
+        return;
+    }
+
+    // Convert numeric indices to feature names if needed
+    const features = importance_data.features.map(f => 
+        typeof f === 'number' ? `Feature ${f}` : f
+    );
+
+    const trace = {
+        x: importance_data.importance_scores,
+        y: features,
+        type: 'bar',
+        orientation: 'h',
+        marker: {
+            color: 'rgba(58, 171, 115, 0.6)',
+            line: {
+                color: 'rgba(58, 171, 115, 1.0)',
+                width: 1
+            }
+        }
+    };
+
+    const layout = {
+        title: {
+            text: title,
+            font: { size: 16 }
+        },
+        xaxis: {
+            title: 'Importance Score',
+            range: [0, Math.max(...importance_data.importance_scores) * 1.1]
+        },
+        yaxis: {
+            title: 'Features',
+            automargin: true  // Automatically adjust margin for long feature names
+        },
+        margin: {
+            l: 150,
+            r: 30,
+            t: 40,
+            b: 40
+        },
+        height: 300,
+        width: 500  // Set explicit width
+    };
+
+    Plotly.newPlot(elementId, [trace], layout);
+}
+
+function updateMetricsDisplay(result) {
+    document.getElementById('kmeans-stability').textContent = 
+        result.cluster_stability.kmeans.toFixed(3);
+    document.getElementById('gmm-stability').textContent = 
+        result.cluster_stability.gmm.toFixed(3);
+    document.getElementById('normality-test').textContent = 
+        result.normality_test.toFixed(3);
+}
+
 function plotResults(result) {
     const plotType = document.getElementById('plot-type').value;
     const xIndex = document.getElementById('x-axis').value;
@@ -169,4 +279,21 @@ function plotResults(result) {
     document.getElementById('gmm-calinski').textContent = `GMM Calinski-Harabasz Score: ${result.gmm_calinski.toFixed(3)}`;
 
     plotElbowMethod(result.elbow_scores);
+
+    // Plot cluster densities using first principal component
+    const pcaData = result.pca.map(d => d[0]); // Use first PC
+    plotClusterDensity('density-plot', pcaData, result.kmeans_labels);
+    
+    // Update metrics display
+    updateMetricsDisplay(result);
+    
+    // Plot feature importance if available
+    if (result.feature_importance) {
+        plotFeatureImportance('kmeans-importance', 
+                             result.feature_importance.kmeans, 
+                             'K-means Feature Importance');
+        plotFeatureImportance('gmm-importance', 
+                             result.feature_importance.gmm, 
+                             'GMM Feature Importance');
+    }
 }

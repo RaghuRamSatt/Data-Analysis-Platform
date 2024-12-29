@@ -159,7 +159,18 @@ function exportResults() {
             elbow_scores: globalResult.elbow_scores
         },
         optics: globalResult.optics_calinski,
-        gmm: globalResult.gmm_calinski
+        gmm: globalResult.gmm_calinski,
+        stability_analysis: {
+            kmeans: globalResult.cluster_stability.kmeans,
+            gmm: globalResult.cluster_stability.gmm
+        },
+        statistical_tests: {
+            normality: globalResult.normality_test
+        },
+        feature_importance: {
+            kmeans: globalResult.feature_importance.kmeans,
+            gmm: globalResult.feature_importance.gmm
+        }
     };
     
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
